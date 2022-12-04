@@ -1,5 +1,8 @@
 new:
-	./new.sh
+	./scripts/new.sh
 
 last:
-	./last.sh
+	./scripts/last.sh
+
+all:
+	./scripts/all.sh
