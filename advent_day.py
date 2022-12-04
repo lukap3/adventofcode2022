@@ -61,8 +61,9 @@ class AdventDay:
                 count += 1
             else:
                 print(
-                    f"PART 2 TEST {i+1}: {test_result}, (expected {self.test_solutions[i][1]})",
-                    f"(expected {self.test_solutions[i][0]})",
+                    f"PART 2 TEST {i+1}: {test_result}",
+                    color("FAILED", "red"),
+                    f"(expected {self.test_solutions[i][1]})",
                 )
 
         print("-------------------------")
