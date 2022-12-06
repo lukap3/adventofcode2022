@@ -1,3 +1,5 @@
+import re
+
 from advent_day import AdventDay
 
 
@@ -11,27 +13,27 @@ class Day(AdventDay):
     data_file = "data/day5/data.txt"
 
     def parse_file(self, data):
+        crates_r = re.compile("\[(\w)]| {4}")
+        moves_r = re.compile("move (\d+) from (\d) to (\d)")
+
         data = data.split("\n")
         rows = []
+        columns = []
         commands = []
         for line in data[:-1]:
-            if "[" in line:
-                line = chunk(line)
-                rows.append(line)
-            elif "move" in line:
-                line = line.split(" ")
-                c_num, c_from, c_to = int(line[1]), int(line[3]), int(line[5])
-                commands.append((c_num, c_from, c_to))
+            if crates_r.match(line):
+                rows.append(re.findall(crates_r, line))
+            elif moves_r.match(line):
+                c_num, c_from, c_to = re.findall(moves_r, line)[0]
+                commands.append((int(c_num), int(c_from), int(c_to)))
 
-        columns = []
         for _ in range(len(rows[-1])):
             columns.append([])
 
         for row in reversed(rows):
             for i in range(len(row)):
-                cr = row[i].strip()
-                if "[" in cr:
-                    columns[i].append(cr[1:-1])
+                if row[i]:
+                    columns[i].append(row[i])
 
         return columns, commands
 
