@@ -1,3 +1,5 @@
+import re
+from collections import defaultdict
 from copy import copy
 
 from advent_day import AdventDay
@@ -11,31 +13,42 @@ class Day(AdventDay):
         return data.split("\n")[:-1]
 
     @staticmethod
-    def get_sizes(data):
-        current_path = []
-        sizes = {}
+    def up(path, _, sizes):
+        return path[:-1], sizes
+
+    @staticmethod
+    def down(path, cmd, sizes):
+        directory = cmd.split(" ")[2]
+        if directory == "/":
+            directory = "~"
+        path.append(directory)
+        return path, sizes
+
+    @staticmethod
+    def file(path, cmd, sizes):
+        cmd = cmd.split(" ")
+        temp_path = copy(path)
+        for i in range(len(temp_path)):
+            sizes["/".join(temp_path)] += int(cmd[0])
+            temp_path.pop()
+        return path, sizes
+
+    def get_sizes(self, data):
+
+        cmd_rs = {
+            r"\$ cd \.\.": self.up,  # $ cd ..
+            r"\$ cd (\w|\/)": self.down,  # $ cd folder
+            r"[0-9]+ .+": self.file,  # 123 e.txt
+        }
+
+        path = []
+        sizes = defaultdict(int)
+
         for cmd in data:
-            cmd = cmd.split(" ")
-            if cmd[0] == "$":
-                if cmd[1] == "cd" and cmd[2] == "..":
-                    current_path.pop()
-                elif cmd[1] == "cd":
-                    if cmd[2] == "/":
-                        cmd[2] = "~"
-                    current_path.append(cmd[2])
-                elif cmd[1] == "ls":
-                    pass
-            else:
-                if cmd[0] != "dir":
-                    size = int(cmd[0])
-                    temp_path = copy(current_path)
-                    for i in range(len(temp_path)):
-                        path = "/".join(temp_path)
-                        if path in sizes:
-                            sizes[path] += size
-                        else:
-                            sizes[path] = size
-                        temp_path.pop()
+            for cmd_r, func in cmd_rs.items():
+                if re.match(cmd_r, cmd):
+                    path, sizes = func(path, cmd, sizes)
+
         return sizes
 
     def part_1_logic(self, data):
