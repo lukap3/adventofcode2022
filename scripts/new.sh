@@ -1,5 +1,5 @@
 days=()
-for entry in ./day*.py
+for entry in days/day*.py
 do
   dayNum="${entry//[^0-9]/}"
   days+=("$dayNum")
@@ -16,5 +16,5 @@ echo "Generating day $next"
 mkdir data/day$next
 touch data/day$next/data.txt
 touch data/day$next/example.txt
-cp template.py day$next.py
-sed -i '' "s/dayX/day$next/" day$next.py
+cp template days/day$next.py
+sed -i '' "s/dayX/day$next/" days/day$next.py

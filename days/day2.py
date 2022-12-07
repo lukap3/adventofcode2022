@@ -16,11 +16,7 @@ class Day2(AdventDay):
     @staticmethod
     def get_points(p1, p2):
         base_points = 1 + ["A", "B", "C"].index(p2)
-        beats = {
-            "B": "A",
-            "C": "B",
-            "A": "C"
-        }
+        beats = {"B": "A", "C": "B", "A": "C"}
         if beats[p2] == p1:
             return 6 + base_points
         elif beats[p1] == p2:
@@ -31,11 +27,7 @@ class Day2(AdventDay):
     @staticmethod
     def generate_hand(p1, p2):
         idx = ["X", "Y", "Z"].index(p2)
-        gens = {
-            "A": ["C", "A", "B"],
-            "B": ["A", "B", "C"],
-            "C": ["B", "C", "A"]
-        }
+        gens = {"A": ["C", "A", "B"], "B": ["A", "B", "C"], "C": ["B", "C", "A"]}
         return gens[p1][idx]
 
     def part_1_logic(self, data):

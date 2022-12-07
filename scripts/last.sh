@@ -1,5 +1,5 @@
 days=()
-for entry in ./day*.py
+for entry in days/day*.py
 do
   dayNum="${entry//[^0-9]/}"
   days+=("$dayNum")
@@ -10,4 +10,4 @@ for n in "${days[@]}" ; do
     ((n > max)) && max=$n
 done
 
-python day$max.py
+python days/day$max.py

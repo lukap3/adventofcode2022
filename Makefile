@@ -1,8 +1,8 @@
 new:
 	./scripts/new.sh
 
-last:
+run-last:
 	./scripts/last.sh
 
-all:
+run-all:
 	./scripts/all.sh
