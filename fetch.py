@@ -1,3 +1,4 @@
+import os
 import sys
 
 import markdownify
@@ -16,12 +17,14 @@ f.write(data + "\n")
 f.close()
 
 url = f"https://adventofcode.com/{year}/day/{day}"
-resp = requests.get(url)
-
+cookies = {"session": os.getenv("AOC_SESSION")}
+resp = requests.get(url, cookies=cookies)  # type: ignore
 soup = BeautifulSoup(resp.content, "html.parser")
-desc = soup.find("article", attrs={"class": "day-desc"})
 
-h = markdownify.markdownify(str(desc), heading_style="ATX")
+instructions = soup.find_all("article", attrs={"class": "day-desc"})
+instructions = "\n".join([str(desc) for desc in instructions]) + "\n"
+
+h = markdownify.markdownify(str(instructions), heading_style="ATX")
 f = open(f"./data/day{day}/instructions.md", "w")
 f.write(h)
 f.close()
