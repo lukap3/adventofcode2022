@@ -18,3 +18,5 @@ touch data/day$next/data.txt
 touch data/day$next/example.txt
 cp template days/day$next.py
 sed -i '' "s/dayX/day$next/" days/day$next.py
+
+python fetch.py ${YEAR} $next
