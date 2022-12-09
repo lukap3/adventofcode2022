@@ -10,7 +10,7 @@ class Day(AdventDay):
     letters = string.ascii_lowercase + string.ascii_uppercase
 
     def parse_file(self, data):
-        data = data.split("\n")
+        data = data.split("\n")[:-1]
         return data
 
     def part_1_logic(self, data):

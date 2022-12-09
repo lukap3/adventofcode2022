@@ -8,7 +8,7 @@ class Day2(AdventDay):
     data_file = "data/day2/data.txt"
 
     def parse_file(self, data):
-        data = data.split("\n")
+        data = data.split("\n")[:-1]
         for i in range(len(data)):
             data[i] = data[i].split(" ")
         return data
