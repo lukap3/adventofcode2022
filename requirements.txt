@@ -14,3 +14,4 @@ termcolor==2.1.1
 tzdata==2022.7
 tzlocal==4.2
 urllib3==1.26.13
+Dijkstar~=2.6.0
