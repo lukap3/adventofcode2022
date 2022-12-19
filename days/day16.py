@@ -76,31 +76,24 @@ class Day(AdventDay):
 
         return max(self.scores.values())
 
-    def get_complementary_paths(self, path):
-        # TODO
-        pass
-
     def part_2_logic(self, valves):
         graph = self.generate_graph(valves)
         distances = self.get_all_distances(graph)
         flow_rates = {valve: valve_data[0] for valve, valve_data in valves.items()}
 
-        nodes = list(flow_rates.keys())
-        nodes.remove("AA")
-        nodes = set(nodes)
-
         self.scores = {}
         self.bfs("AA", 26, flow_rates, distances, 0, 0, [])
 
-        double_scores = []
-        for path, score in self.scores.items():
-            # TODO get only the paths that make sense in this case
-            # for e_path, e_score in self.get_complementary_paths(path)
-            for e_path, e_score in self.scores.items():
+        paths = sorted(self.scores.items(), key=lambda x: x[1], reverse=True)
+        max_double = 0
+        for path, score in paths:
+            for e_path, e_score in paths:
+                if score + e_score <= max_double:
+                    break
                 if not set(path).intersection(set(e_path)) and path and e_path:
-                    double_scores.append(score + e_score)
+                    max_double = score + e_score
 
-        return max(double_scores)
+        return max_double
 
 
 day = Day()
