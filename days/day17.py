@@ -115,42 +115,48 @@ class Day(AdventDay):
 
         return len(board)
 
+    @staticmethod
+    def check_cycles(cycles):
+        x_diffs = []
+        h_diffs = []
+        for i in range(len(cycles) - 1):
+            x_diffs.append(cycles[i + 1][1] - cycles[i][1])
+            h_diffs.append(cycles[i + 1][0] - cycles[i][0])
+        return len(set(x_diffs)) == 1 and len(set(h_diffs)) == 1
+
     def part_2_logic(self, jet_pattern):
         board = []
-        height = 0
         cycles = {}
         num_rocks = 1000000000000
         repeating_cycle = None
         for x in range(num_rocks):
             board, rock_parts = self.add_rock(board, x)
             board, jet_pattern = self.drop_rock(board, rock_parts, jet_pattern)
-            board, cycle_height = self.simplify_board(board)
-            if cycle_height:
-                height += cycle_height
-                cycle = (cycle_height, x % len(self.rocks), hash("".join(jet_pattern)))
-                if cycle in cycles:
-                    cycles[cycle].append((x, cycle_height, height))
-                    repeating_cycle = cycle
+            current_hash = (x % len(self.rocks), "".join(jet_pattern))
+            if current_hash in cycles:
+                cycles[current_hash].append((x, len(board)))
+            else:
+                cycles[current_hash] = [(x, len(board))]
+
+            if len(cycles[current_hash]) > 5:
+                if self.check_cycles(cycles[current_hash]):
+                    repeating_cycle = cycles[current_hash]
                     break
-                else:
-                    cycles[cycle] = [(x, height, height)]
 
-        cs = cycles[repeating_cycle]
+        x = repeating_cycle[-1][0]  # 189
+        height = repeating_cycle[-1][1]  # 290
 
-        a_step = cs[1][0] - cs[0][0]
-        c_step = cs[1][2] - cs[0][2]
-        m = int((num_rocks - cs[0][0]) / a_step)
-        simulated_cs = list(cs[0])
-        simulated_cs[0] += m * a_step
-        simulated_cs[2] += m * c_step
-        height = simulated_cs[2]
+        x_step_size = repeating_cycle[-1][0] - repeating_cycle[-2][0]
+        height_step_size = repeating_cycle[-1][1] - repeating_cycle[-2][1]
 
-        board = []
-        for x in range(simulated_cs[0] + 1, 1000000000000):
-            board, rock_parts = self.add_rock(board, x)
-            board, jet_pattern = self.drop_rock(board, rock_parts, jet_pattern)
+        remaining_rocks = num_rocks - x
 
-        return height + len(board)
+        m = int(remaining_rocks / x_step_size)
+
+        x += m * x_step_size
+        height += m * height_step_size
+
+        return height
 
 
 day = Day()
