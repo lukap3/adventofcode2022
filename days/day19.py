@@ -1,180 +1,162 @@
 import re
-from copy import deepcopy
 from threading import Thread
 
 from advent_day import AdventDay
+
+
+class Blueprint:
+    def __init__(self, input_string):
+        vals = [int(i) for i in re.findall(r"\d+", input_string)]
+        self.id = vals[0]
+        self.cost = {
+            "ore": {"ore": vals[1]},
+            "clay": {"ore": vals[2]},
+            "obsidian": {"ore": vals[3], "clay": vals[4]},
+            "geode": {"ore": vals[5], "obsidian": vals[6]},
+        }
+        self.useful = {
+            "ore": max(
+                self.cost["clay"]["ore"],
+                self.cost["obsidian"]["ore"],
+                self.cost["geode"]["ore"],
+            ),
+            "clay": self.cost["obsidian"]["clay"],
+            "obsidian": self.cost["geode"]["obsidian"],
+            "geode": float("inf"),
+        }
+
+
+class State:
+    def __init__(self, robots=None, resources=None, ignored=None):
+        self.robots = (
+            robots.copy()
+            if robots
+            else {"ore": 1, "clay": 0, "obsidian": 0, "geode": 0}
+        )
+        self.resources = (
+            resources.copy()
+            if resources
+            else {"ore": 0, "clay": 0, "obsidian": 0, "geode": 0}
+        )
+        self.ignored = ignored.copy() if ignored else []
+
+    def copy(self):
+        return State(self.robots, self.resources, self.ignored)
+
+    def __gt__(self, other):
+        return self.resources["geode"] > other.resources["geode"]
+
+    def __repr__(self):
+        return f"{{robots: {self.robots}, resources: {self.resources}}}"
+
+
+def get_daily_input():
+    file_data = open("data/day19/data.txt", "r").read()
+    return file_data.split("\n")[:-1]
 
 
 class Day(AdventDay):
     test_files = {"data/day19/example.txt": [33, 3472]}
     data_file = "data/day19/data.txt"
 
-    @staticmethod
-    def parse_materials(materials):
-        materials = materials[0]
-        cost = {}
-        for i in range(0, len(materials), 2):
-            cost[materials[i + 1]] = int(materials[i])
-        return cost
-
     def parse_file(self, data):
         data = data.split("\n")[:-1]
         blueprints = []
-        for line in data:
-            ore_robot = re.findall("ore robot costs (\d+) (\w+)", line)
-            clay_robot = re.findall("clay robot costs (\d+) (\w+)", line)
-            obsidian_robot = re.findall(
-                "obsidian robot costs (\d+) (\w+) and (\d+) (\w+)", line
-            )
-            geode_robot = re.findall(
-                "geode robot costs (\d+) (\w+) and (\d+) (\w+)", line
-            )
-            blueprints.append(
-                {
-                    "ore": self.parse_materials(ore_robot),
-                    "clay": self.parse_materials(clay_robot),
-                    "obsidian": self.parse_materials(obsidian_robot),
-                    "geode": self.parse_materials(geode_robot),
-                }
-            )
+        for i, line in enumerate(data):
+            blueprints.append(Blueprint(line))
         return blueprints
 
-    @staticmethod
-    def get_build_options(state, blueprint):
-        options = [None]
-        for robot_type, costs in blueprint.items():
-            can_build = True
-            if state["robots"][robot_type] < state["robot_limits"][robot_type]:
-                for material_type, amount in costs.items():
-                    if state["materials"][material_type] < amount:
-                        can_build = False
-                if can_build:
-                    options.append(robot_type)
-        return options
+    def dfs(self, blueprint, prior_states, timelimit):
+        time_remaining = timelimit - len(prior_states)
+        curr_state = prior_states[-1]
 
-    @staticmethod
-    def build_state(state, blueprint, robot_type):
-        state = deepcopy(state)
-        if robot_type is None:
-            return state
+        options: list[str] = []
+        if time_remaining >= 0:
+            for robot, cost in blueprint.cost.items():
+                if (
+                    curr_state.robots[robot] < blueprint.useful[robot]
+                    and all(curr_state.resources[k] >= v for k, v in cost.items())
+                    and robot not in curr_state.ignored
+                ):
+                    options.append(robot)
 
-        costs = blueprint[robot_type]
-        for material, amount in costs.items():
-            state["materials"][material] -= amount
-        state["building"] = robot_type
-        return state
+            if "geode" in options:
+                options = ["geode"]
+            elif time_remaining < 1:
+                options = []
+            else:
+                if (
+                    curr_state.robots["clay"] > 3
+                    or curr_state.robots["obsidian"]
+                    or "obsidian" in options
+                ) and "ore" in options:
+                    options.remove("ore")
+                if (
+                    curr_state.robots["obsidian"] > 3
+                    or curr_state.robots["geode"]
+                    or "geode" in options
+                ) and "clay" in options:
+                    options.remove("clay")
 
-    @staticmethod
-    def collect_state(state):
-        for robot_type, amount in state["robots"].items():
-            state["materials"][robot_type] += amount
-        return state
+            next_state = curr_state.copy()
+            for r, n in next_state.robots.items():
+                next_state.resources[r] += n
 
-    @staticmethod
-    def complete_building(state):
-        if state["building"] is not None:
-            state["robots"][state["building"]] += 1
-            state["building"] = None
-        return state
+            next_state.ignored += options
+            results = [self.dfs(blueprint, prior_states + [next_state], timelimit)]
 
-    def get_next_states(self, state, blueprint):
-        build_options = self.get_build_options(state, blueprint)
-        states = []
-        for option in build_options:
-            states.append(self.build_state(state, blueprint, option))
-
-        for state in states:
-            self.collect_state(state)
-
-        for state in states:
-            self.complete_building(state)
-
-        for state in states:
-            state["minutes"] -= 1
-
-        return states
-
-    @staticmethod
-    def remove_duplicates(states):
-        state_map = {}
-        for state in states:
-            state_map[
-                (
-                    state["materials"]["ore"],
-                    state["materials"]["clay"],
-                    state["materials"]["obsidian"],
-                    state["materials"]["geode"],
-                    state["robots"]["ore"],
-                    state["robots"]["clay"],
-                    state["robots"]["obsidian"],
-                    state["robots"]["geode"],
+            for opt in options:
+                next_state_opt = next_state.copy()
+                next_state_opt.ignored = []
+                next_state_opt.robots[opt] += 1
+                for r, n in blueprint.cost[opt].items():
+                    next_state_opt.resources[r] -= n
+                results.append(
+                    self.dfs(blueprint, prior_states + [next_state_opt], timelimit)
                 )
-            ] = state
-        return list(state_map.values())
 
-    def prune_states(self, states):
-        # TODO only keep the states with the best "potential"
-        return self.remove_duplicates(states)
+            return max(results)
 
-    @staticmethod
-    def init_state(blueprint, t):
-        state = {
-            "materials": {"ore": 0, "clay": 0, "obsidian": 0, "geode": 0},
-            "robots": {"ore": 1, "clay": 0, "obsidian": 0, "geode": 0},
-            "robot_limits": {"ore": 0, "clay": 0, "obsidian": 0, "geode": 100000},
-            "minutes": t,
-            "building": None,
-        }
-        for robot_type, costs in blueprint.items():
-            for material, amount in costs.items():
-                if amount > state["robot_limits"][material]:
-                    state["robot_limits"][material] = amount
-        return state
+        return prior_states[-1].resources["geode"], prior_states
 
-    def test_blueprint(self, blueprint, index, results, t=24):
-        state = self.init_state(blueprint, t)
-        states = [deepcopy(state)]
-        for i in range(t):
-            next_states = []
-            for state in self.prune_states(states):
-                next_states += self.get_next_states(state, blueprint)
-            states = next_states
-
-        geodes = []
-        for state in states:
-            geodes.append(state["materials"]["geode"])
-        results[str(index)] = max(geodes)
+    def evaluate_blueprint(self, blueprint, results, timelimit=24):
+        r = self.dfs(blueprint, [State()], timelimit)
+        results[blueprint.id] = r[0]
 
     def part_1_logic(self, blueprints):
-        threads = []
         results = {}
-        for i, blueprint in enumerate(blueprints):
-            t = Thread(target=self.test_blueprint, args=(blueprint, i + 1, results))
-            t.start()
-            threads.append(t)
+        threads = []
+        for blueprint in blueprints:
+            thread = Thread(target=self.evaluate_blueprint, args=(blueprint, results))
+            threads.append(thread)
+            thread.start()
 
-        for t in threads:
-            t.join()
+        for thread in threads:
+            thread.join()
 
         summa = 0
-        for index, value in results.items():
-            summa += int(index) * value
+        for index, result in results.items():
+            summa += index * result
+
         return summa
 
     def part_2_logic(self, blueprints):
-        threads = []
         results = {}
-        for i, blueprint in enumerate(blueprints[:3]):
-            t = Thread(target=self.test_blueprint, args=(blueprint, i + 1, results, 32))
-            t.start()
-            threads.append(t)
+        threads = []
+        for blueprint in blueprints[:3]:
+            thread = Thread(
+                target=self.evaluate_blueprint, args=(blueprint, results, 32)
+            )
+            threads.append(thread)
+            thread.start()
 
-        for t in threads:
-            t.join()
+        for thread in threads:
+            thread.join()
 
         summa = 1
-        for index, value in results.items():
-            summa *= value
+        for _, result in results.items():
+            summa *= result
+
         return summa
 
 
