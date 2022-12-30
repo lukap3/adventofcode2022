@@ -1,10 +1,15 @@
 from copy import deepcopy
 from typing import Any, Dict, List
+import time
 
 
 def color(text, cl):
     colors = {"green": "\033[92m", "red": "\033[91m"}
     return colors[cl] + text + "\033[0m"
+
+
+def log(text, depth=0):
+    print("  " * depth + text)
 
 
 class AdventDay:
@@ -19,6 +24,7 @@ class AdventDay:
             self.test_data.append(self.read_file(test_file))
             self.test_solutions.append(test_solution)
         self.data = self.read_file(self.data_file)
+        self._funcs = [self.part_1_logic, self.part_2_logic]
         self.run()
 
     def read_file(self, file: str) -> str:
@@ -34,40 +40,34 @@ class AdventDay:
     def part_2_logic(self, data: Any) -> Any:
         return None
 
+    def _run_part_test(self, index) -> bool:
+        for i, test_data in enumerate(self.test_data):
+            test_data = deepcopy(test_data)
+            expected = self.test_solutions[i][index]
+            result = self._funcs[index](test_data)
+            if not result == expected:
+                log(f" {color('x', 'red')} Test {i + 1}: {result} (expected {expected})")
+                return False
+            else:
+                log(f"{color('✓', 'green')} Test {i + 1}: {result}")
+        return True
+
+    def _run_part(self, index) -> Any:
+        log(f"----- Running part {index + 1} -----")
+        if self._run_part_test(index):
+            data = deepcopy(self.data)
+            start = time.perf_counter()
+            result = self._funcs[index](data)
+            end = time.perf_counter()
+            exec_time = round((end - start) * 1000, 2)
+            if exec_time > 1000:
+                exec_time = str(exec_time/1000) + "s"
+            else:
+                exec_time = str(exec_time) + "ms"
+            log(f"Result: {result} ({exec_time})", 1)
+            return True
+        return False
+
     def run(self) -> Any:
-        if self.run_tests():
-            result = self.part_1_logic(deepcopy(self.data))
-            print(f"PART 1 RESULT: {result}")
-            result = self.part_2_logic(deepcopy(self.data))
-            print(f"PART 2 RESULT: {result}")
-
-    def run_tests(self) -> Any:
-        print("----- Running tests -----")
-        count = 0
-        for i, data in enumerate(self.test_data):
-            test_result = self.part_1_logic(deepcopy(data))
-            if test_result == self.test_solutions[i][0]:
-                print(f"PART 1 TEST {i+1}: {test_result}", color("SUCCESS", "green"))
-                count += 1
-            else:
-                print(
-                    f"PART 1 TEST {i+1}: {test_result}",
-                    color("FAILED", "red"),
-                    f"(expected {self.test_solutions[i][0]})",
-                )
-            test_result = self.part_2_logic(deepcopy(data))
-            if test_result == self.test_solutions[i][1]:
-                print(f"PART 2 TEST {i+1}: {test_result}", color("SUCCESS", "green"))
-                count += 1
-            else:
-                print(
-                    f"PART 2 TEST {i+1}: {test_result}",
-                    color("FAILED", "red"),
-                    f"(expected {self.test_solutions[i][1]})",
-                )
-
-        print("-------------------------")
-        print(f"{count}/{len(self.test_data) * 2} tests succeeded")
-        print("-------------------------")
-
-        return count == len(self.test_data) * 2
+        if self._run_part(0):
+            self._run_part(1)
